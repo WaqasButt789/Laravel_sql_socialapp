@@ -32,7 +32,7 @@ class UserController extends Controller
         $user->save();
         $mail=$req->email;
         $this->sendmail($mail,$token);
-        return response(["message" => "Data added successfuly please verify your email"]);
+        return response(["message" => "Data added successfuly please verify your email","status" =>200]);
     }
       ////sending mail function
 
@@ -62,10 +62,11 @@ class UserController extends Controller
         if (Hash::check($password, $dpsw)) {
             DB::table('users')->where('email',$email)->update(['status'=>true]);
             DB::table('users')->where('email',$email)->update(['remember_token'=>$token]);
-            return response()->json(['access_token'=>$token , 'message'=> 'successfuly login']);
+            return response()->json(['access_token'=>$token , 'message'=> 'successfuly login',"status"=>200]);
+
             }
         else{
-                return "your credentials are not valid";
+                return response(["message" => "your credentials are not valid","status" =>401]);
         }
     }
     /**
@@ -79,25 +80,25 @@ class UserController extends Controller
         {
             if(DB::table('users')->where(['uid' => $uid])->update(['name' => $req->name])==1)
             {
-                return response()->json(["messsage" => "user data updated successfuly"]);
+              return response()->success();
             }
         }
         if($req->password != NULL)
         {
             if(DB::table('users')->where(['uid' => $uid])->update(['password' => $password])==1)
             {
-                return response()->json(["messsage" => "user data updated successfuly"]);
+                return response()->success();
             }
         }
         if($req->gender != NULL)
         {
             if(DB::table('users')->where(['uid' => $uid])->update(['gender' => $req->gender])==1)
             {
-                return response()->json(["messsage" => "user data updated successfuly"]);
+                return response()->success();
             }
         }
         else{
-            return response()->json(["messsage" => "No user data to update"]);
+            return response()->json(["messsage" => "No user data to update" ,"status" => 204]);
         }
     }
 
@@ -110,7 +111,7 @@ class UserController extends Controller
         $key=$req->token;
         DB::table('users')->where('remember_token',$key)->update(['status'=>false]);
         DB::table('users')->where('remember_token',$key)->update(['remember_token'=>NULL]);
-        return response()->json(['message'=>'logout successfuly']);
+        return response()->json(['message'=>'logout successfuly',"status" => 200]);
     }
     /**
      * get user data function

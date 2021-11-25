@@ -32,11 +32,11 @@ class ForgetController extends Controller
             // DB::table('users')->where('email',$email)->update(['token'=>$key]);
             // Mail::to($email)->send(new TestMail($details));
             dispatch(new SendEmailJob($email,$details));
-            return response(["message"=>"We have sent an OTP to your registered email Please verify yourself"]);
+            return response(["message"=>"We have sent an OTP to your registered email Please verify yourself","status" => 200]);
         }
         else
         {
-            return response(['message' => 'Provided Email is Not Valid']);
+            return response(['message' => 'Provided Email is Not Valid',"status" => 401]);
         }
     }
 
@@ -51,16 +51,16 @@ class ForgetController extends Controller
             {
                 $pass=Hash::make($newpassword);
                 DB::table('users')->where('email',$email)->update(['password'=>$pass]);
-                return response(['message' => 'Password changed successfuly']);
+                return response(['message' => 'Password changed successfuly',"status" => 200]);
             }
             else
             {
-                return response(['message' => 'Please Provide a Valid OTP']);
+                return response(['message' => 'Please Provide a Valid OTP',"status" => 401]);
             }
         }
         else
         {
-            return response(['message' => 'Provided Email is Not Valid']);
+            return response(['message' => 'Provided Email is Not Valid',"status" => 401]);
         }
     }
 }

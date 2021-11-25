@@ -18,7 +18,7 @@ class updatecontroller extends Controller
         if($count>0)
         {
             DB::table('users')->where('token',$token)->update(['email_verified_at'=>now()]);
-            return "Your Email is Verified";
+            return response(["message"=>"Email has been Verified","status" => 200]);
         }
         else{
             return "Your Email is not Verified";

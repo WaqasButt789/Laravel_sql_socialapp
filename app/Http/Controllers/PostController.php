@@ -30,7 +30,7 @@ class PostController extends Controller
         $post->file = $path;
         $post->accessors=$req->access;
         $post->save();
-        return response()->json(['message'=>'post created successfuly']);
+        return response()->json(['message'=>'post created successfuly',"status" => 200]);
     }
     /**
      * delete post controller
@@ -42,10 +42,10 @@ class PostController extends Controller
         DB::table('comments')->where('p_id',$pid)->delete();
         if(DB::table('posts')->where(['pid'=> $pid , 'user_id' => $uid])->delete()==1)
         {
-            return response()->json(["messsage" => "Post deleted successfuly"]);
+            return response()->json(["messsage" => "Post deleted successfuly","status" => 200]);
         }
         else{
-            return response()->json(["messsage" => "You are not allowed to delete this post"]);
+            return response()->json(["messsage" => "You are not allowed to delete this post","status" => 401]);
         }
     }
     /**
@@ -61,14 +61,14 @@ class PostController extends Controller
             $path = $req->file('file')->store('post');
             if(DB::table('posts')->where(['pid'=> $pid ,'user_id' => $uid])->update(['file' => $path])==1)
             {
-                return response()->json(["messsage" => "Post updated successfuly"]);
+                return response()->json(["messsage" => "Post updated successfuly","status" => 200]);
             }
         }
         if($req->access != NULL)
         {
             if(DB::table('posts')->where(['pid'=> $pid ,'user_id' => $uid])->update(['accessors' => $req->access])==1)
             {
-                return response()->json(["messsage" => "Post updated successfuly"]);
+                return response()->json(["messsage" => "Post updated successfuly","status" => 200]);
             }
         }
         else{
@@ -83,7 +83,6 @@ class PostController extends Controller
     {
         $uid=$req->data->uid;
         $data=DB::table('posts')->where('user_id',$uid)->get();
-        //return response(['message'=>$data]);
         return new PostResource($data);
     }
 }

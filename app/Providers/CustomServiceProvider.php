@@ -24,18 +24,17 @@ class CustomServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        Response::macro('success',function($data,$status_code){
+        Response::macro('success',function(){
 
         return response()->json([
             'success' => true,
-            'message' => $data['message'],
-            'data'    => $data['data'],
-        ],$status_code);
+            'message' => "Successfully done",
+
+        ],200);
 
 
         });
         Response::macro('error',function($data, $status_code){
-            
         return response()->json([
             'success' => false,
             'message' => $data['message'],

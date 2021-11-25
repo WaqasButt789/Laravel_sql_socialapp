@@ -20,10 +20,10 @@ class FreindController extends Controller
             $friend->userid_1=$uid;
             $friend->userid_2=$fid;
             $friend->save();
-            return response()->json(["messsage" => "now you are friend of".$fid]);
+            return response()->json(["messsage" => "now you are friends","status" => 200]);
         }
         else{
-            return response(["message" => "User with id = ".$fid." is already your friend"]);
+            return response(["message" => "invalid access","status" => 405]);
         }
     }
 
@@ -33,10 +33,10 @@ class FreindController extends Controller
         $uid=$req->data->uid;
         if(DB::table('friends')->where(['userid_1' => $uid , 'userid_2' => $fid])->delete() == 1)
         {
-            return response(['Message' => 'Unfriend Successfuly']);
+            return response(['Message' => 'Unfriend Successfuly',"status" => 200]);
         }
         else{
-            return response(['Message' => 'You are not the friend of '.$fid]);
+            return response(['Message' => 'invalid credentials',"status" => 405]);
         }
     }
 }

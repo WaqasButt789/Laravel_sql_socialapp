@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\ForgetPasswordRequest;
 use App\Http\Requests\ChangePasswordRequest;
+use App\Jobs\SendEmailJob;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Validator;
 
@@ -26,10 +27,11 @@ class ForgetController extends Controller
             $key = rand(100,1000);
             $details=[
                 'title' => 'Please Use This OTP : '. $key,
-                'body' => ' '   
+                'body' => ' '
             ];
-            DB::table('users')->where('email',$email)->update(['token'=>$key]);
-            Mail::to($email)->send(new TestMail($details));
+            // DB::table('users')->where('email',$email)->update(['token'=>$key]);
+            // Mail::to($email)->send(new TestMail($details));
+            dispatch(new SendEmailJob($email,$details));
             return response(["message"=>"We have sent an OTP to your registered email Please verify yourself"]);
         }
         else
@@ -60,5 +62,5 @@ class ForgetController extends Controller
         {
             return response(['message' => 'Provided Email is Not Valid']);
         }
-    }   
+    }
 }

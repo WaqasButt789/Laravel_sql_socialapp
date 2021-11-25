@@ -1,21 +1,19 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Models\user;
+use App\Models\User;
 use App\Mail\TestMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
 use App\Http\Requests\SignUpRequest;
 use App\Http\Requests\LogInRequest;
 use App\Http\Requests\UpdateUserRequest;
-
+use App\Http\Resources\PostsCommentsResource;
+use App\Http\Resources\UserResource;
+use App\Services\jwtService;
+use App\Jobs\SendEmailJob;
 
 class UserController extends Controller
 {
@@ -24,32 +22,27 @@ class UserController extends Controller
      */
     public function userSignup(SignUpRequest $req)
     {
-        try{
-            $req->validated();
-            $user=new User;
-            $user->name=$req->name;
-            $user->email=$req->email;
-            $user->password=Hash::make($req->password);
-            $user->gender=$req->gender;
-            $user->status=$req->status;
-            $user->token =$token = rand(100,1000);
-            $user->save();    
-            $mail=$req->email;
-            $this->sendmail($mail,$token);
-            return $user;
-        }catch(Exception $ex){
-            return response()->json(['Error'=>$ex->getMessage()]);
-        }
+        $user=new User;
+        $user->name=$req->name;
+        $user->email=$req->email;
+        $user->password=Hash::make($req->password);
+        $user->gender=$req->gender;
+        $user->status=$req->status;
+        $user->token =$token = rand(100,1000);
+        $user->save();
+        $mail=$req->email;
+        $this->sendmail($mail,$token);
+        return response(["message" => "Data added successfuly please verify your email"]);
     }
       ////sending mail function
-     
+
     public function sendmail($mail,$token)
     {
         $details=[
             'title' => 'Please Verify Your Email',
             'body' => 'http://127.0.0.1:8000/api/verify/'.$mail.'/'.$token
         ];
-        Mail::to($mail)->send(new TestMail($details));
+        dispatch(new SendEmailJob($mail,$details));
         return "Email Sent Succesfully";
     }
 
@@ -61,36 +54,18 @@ class UserController extends Controller
         $email=$req->email;
         $password=$req->password;
         $data = DB::table('users')->where('email',$email)->get();
-        $emaildata = DB::table('users')->select('email_verified_at')->where('email',$email)->get();
-        
-        if($emaildata[0]->email_verified_at!=NULL)
-        {
-            $dpsw = $data[0]->password;
-            $count = count($data);
-    
-            //checking hash password with simple 
-
-            if (Hash::check($password, $dpsw)) {
-    
-                $key = "waqas-123";
-                $payload = array(
-                    "iss" => "localhost",
-                    "aud" => "users",
-                    "iat" => time(),
-                    "nbf" => 1357000000
-                );
-                $token = JWT::encode($payload, $key, 'HS256');
-                DB::table('users')->where('email',$email)->update(['status'=>true]);
-                DB::table('users')->where('email',$email)->update(['remember_token'=>$token]);
-                return response()->json(['access_token'=>$token , 'message'=> 'successfuly login']); 
-              }
-            else{
+        $dpsw = $data[0]->password;
+        $count = count($data);
+        $conn= new jwtService;
+        $token=$conn->get_jwt();
+        //checking hash password with simp le
+        if (Hash::check($password, $dpsw)) {
+            DB::table('users')->where('email',$email)->update(['status'=>true]);
+            DB::table('users')->where('email',$email)->update(['remember_token'=>$token]);
+            return response()->json(['access_token'=>$token , 'message'=> 'successfuly login']);
+            }
+        else{
                 return "your credentials are not valid";
-            } 
-        }
-        else if($emaildata[0]->email_verified_at==NULL)
-        {
-            echo "your email is not vreified";
         }
     }
     /**
@@ -98,23 +73,31 @@ class UserController extends Controller
      */
     public function updateUser(UpdateUserRequest $req)
     {
-        $key=$req->token;
-        $pid=$req->pid;
-        $data=DB::table('users')->where('remember_token',$key)->get();
-        $numrows=count($data);
-        if($numrows>0)
+        $uid=$req->data->uid;
+        $password=Hash::make($req->password);
+        if($req->name != NULL)
         {
-            $password=Hash::make($req->password);
-            $uid=$data[0]->uid;
-            $updateDetails = [
-                'name' => $req->name,
-                'password' => $password
-            ];
-            DB::table('users')->where('uid',$uid)->update($updateDetails);
-            return response()->json(["messsage" => "user data updated successfuly"]);
+            if(DB::table('users')->where(['uid' => $uid])->update(['name' => $req->name])==1)
+            {
+                return response()->json(["messsage" => "user data updated successfuly"]);
+            }
+        }
+        if($req->password != NULL)
+        {
+            if(DB::table('users')->where(['uid' => $uid])->update(['password' => $password])==1)
+            {
+                return response()->json(["messsage" => "user data updated successfuly"]);
+            }
+        }
+        if($req->gender != NULL)
+        {
+            if(DB::table('users')->where(['uid' => $uid])->update(['gender' => $req->gender])==1)
+            {
+                return response()->json(["messsage" => "user data updated successfuly"]);
+            }
         }
         else{
-            return response()->json(["messsage" => "you are not login"]);
+            return response()->json(["messsage" => "No user data to update"]);
         }
     }
 
@@ -125,53 +108,26 @@ class UserController extends Controller
     public function logOut(Request $req)
     {
         $key=$req->token;
-        $data=DB::table('users')->where('remember_token',$key)->get();
-        $numrows=count($data);
-        if($numrows>0)
-        {
-            DB::table('users')->where('remember_token',$key)->update(['status'=>false]);
-            DB::table('users')->where('remember_token',$key)->update(['remember_token'=>NULL]);
-            return response()->json(['message'=>'logout successfuly']);
-        }
-        else{
-            return response()->json(['message'=>'you are already logout']);
-        }
+        DB::table('users')->where('remember_token',$key)->update(['status'=>false]);
+        DB::table('users')->where('remember_token',$key)->update(['remember_token'=>NULL]);
+        return response()->json(['message'=>'logout successfuly']);
     }
     /**
      * get user data function
      */
     public function getUserData(Request $req)
     {
-        $key=$req->token;
-        $data=DB::table('users')->where('remember_token',$key)->get();
-        $numrows=count($data);
-        if($numrows>0)
-        {
-            $uid=$data[0]->uid;
-            $data=DB::table('users')->select('name','email','gender')->where('uid',$uid)->get();
-            return response(['message'=>$data]);
-        }
-        else{
-            return response(['message'=>'you are not login or authenticated user']);
-        }
+        $uid=$req->data->uid;
+        $data=DB::table('users')->select('name','email','gender')->where('uid',$uid)->get();
+        return new UserResource($data);
      }
      /**
       * get all posts aginst a user
       */
     public function getPostDetails(Request $req)
     {
-        $key=$req->token;
-        if($key!=NULL)
-        {
-            $data=DB::table('users')->where('remember_token', $key)->get();
-            $uid=$data[0]->uid;
-            //$d1=user::with('getPostDetails')->where('uid',$uid)->get();
-            $users = User::with(['getPostDetails', 'getPostComments'])->where('uid',$uid)->get();
-            return response(["message" => $users]);
-        }
-        else
-        {
-            return response(["message"=>"Please provide a token"]);
-        }
+        $uid=$req->data->uid;
+        $users = User::with(['getPostDetails', 'getPostComments'])->where('uid',$uid)->get();
+        return new PostsCommentsResource($users);
     }
 }

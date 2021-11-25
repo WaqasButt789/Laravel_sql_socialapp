@@ -37,7 +37,7 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            
+
         ],
 
         'api' => [
@@ -66,6 +66,8 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'cauth' => \App\Http\Middleware\CustomAuth::class,
         'eauth' => \App\Http\Middleware\emailauth::class,
+        'EmailExistsAuth' => \App\Http\Middleware\EmailExistsAuth::class,
+        'isregister'  => \App\Http\Middleware\IsRegisteredUser::class
 
-    ]; 
+    ];
 }

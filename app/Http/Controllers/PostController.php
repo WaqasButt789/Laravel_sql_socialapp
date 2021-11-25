@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Requests\CreatePostRequest;
 use App\Http\Requests\DeletePostRequest;
 use App\Http\Requests\ReadPostRequest;
+use App\Http\Resources\PostResource;
 use Illuminate\Http\Request;
 
 class PostController extends Controller
@@ -16,48 +17,35 @@ class PostController extends Controller
      */
     public function createPost(CreatePostRequest $req)
     {
-        $key=$req->token;
-        $data=DB::table('users')->where('remember_token',$key)->get();
-        $numrows=count($data);
-        if($numrows == 1)
+        if($req->file('file')!=NULL)
         {
-            $uid=$data[0]->uid;
-            $post = new post;
-            $post->user_id=$uid;
             $path = $req->file('file')->store('post');
-            $post->file = $path;
-            $post->accessors=$req->access;
-            $post->save();
-            return response()->json(['message'=>'post created successfuly']);
-         }
-        else{
-            return response()->json(['message'=>'you are not authenticated user']);
         }
+        else{
+            return response()->json(['message'=>'Please Provide a file to create post successfuly']);
+        }
+        $uid=$req->data->uid;
+        $post = new post;
+        $post->user_id=$uid;
+        $post->file = $path;
+        $post->accessors=$req->access;
+        $post->save();
+        return response()->json(['message'=>'post created successfuly']);
     }
-
     /**
      * delete post controller
      */
     public function deletePost(DeletePostRequest $req)
     {
-        $key=$req->token;
         $pid=$req->pid;
-        $data=DB::table('users')->where('remember_token',$key)->get();
-        $numrows=count($data);
-        if($numrows>0)
+        $uid=$req->data->uid;
+        DB::table('comments')->where('p_id',$pid)->delete();
+        if(DB::table('posts')->where(['pid'=> $pid , 'user_id' => $uid])->delete()==1)
         {
-            $uid=$data[0]->uid;
-            DB::table('comments')->where('p_id',$pid)->delete();
-            if(DB::table('posts')->where('pid',$pid)->delete()==1)
-            {
-                return response()->json(["messsage" => "Post deleted successfuly"]);
-            }
-            else{
-                return response()->json(["messsage" => "You are not allowed to delete this post"]);
-            }
+            return response()->json(["messsage" => "Post deleted successfuly"]);
         }
         else{
-            return response()->json(["messsage" => "you are not login so you cannot delete post"]);
+            return response()->json(["messsage" => "You are not allowed to delete this post"]);
         }
     }
     /**
@@ -66,25 +54,25 @@ class PostController extends Controller
 
     public function updatePost(Request $req)
     {
-
-        $key=$req->token;
         $pid=$req->pid;
-        $data=DB::table('users')->where('remember_token',$key)->get();
-        $numrows=count($data);
-        if($numrows>0)
+        $uid=$req->data->uid;
+        if($req->file('file') != NULL)
         {
-            $uid=$data[0]->uid;
             $path = $req->file('file')->store('post');
-            $updateDetails = [
-                'user_id' => $uid,
-                'file' => $path,
-                'accessors' => $req->access
-            ];
-            DB::table('posts')->where('pid',$pid)->update($updateDetails);
-            return response()->json(["messsage" => "Post updated successfuly"]);
+            if(DB::table('posts')->where(['pid'=> $pid ,'user_id' => $uid])->update(['file' => $path])==1)
+            {
+                return response()->json(["messsage" => "Post updated successfuly"]);
+            }
+        }
+        if($req->access != NULL)
+        {
+            if(DB::table('posts')->where(['pid'=> $pid ,'user_id' => $uid])->update(['accessors' => $req->access])==1)
+            {
+                return response()->json(["messsage" => "Post updated successfuly"]);
+            }
         }
         else{
-            return response()->json(["messsage" => "you are not login"]);
+            return response()->json(["messsage" => "No Data To Update"]);
         }
     }
 
@@ -92,21 +80,11 @@ class PostController extends Controller
      * read post function
      */
     public function readPost(ReadPostRequest $req)
-
-        {
-        $key=$req->token;
-        $pid=$req->pid;
-        $data=DB::table('users')->where('remember_token',$key)->get();
-        $numrows=count($data);
-        if($numrows>0)
-        {
-            $uid=$data[0]->uid;
-            $data=DB::table('posts')->where('user_id',$uid)->get();
-            return response(['message'=>$data]);
-        }
-        else{
-            return response(['message'=>'you are not login or authenticated user']);
-        }
+    {
+        $uid=$req->data->uid;
+        $data=DB::table('posts')->where('user_id',$uid)->get();
+        //return response(['message'=>$data]);
+        return new PostResource($data);
     }
 }
 

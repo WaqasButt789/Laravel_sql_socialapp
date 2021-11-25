@@ -1,10 +1,12 @@
 <?php
 
 namespace App\Http\Middleware;
+
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-class CustomAuth
+
+class EmailExistsAuth
 {
     /**
      * Handle an incoming request.
@@ -15,14 +17,12 @@ class CustomAuth
      */
     public function handle(Request $req, Closure $next)
     {
-        $key=$req->token;
-        $data=DB::table('users')->where('remember_token',$key)->first();
-        if($data)
-        {
-            return $next($req->merge(["data"=>$data]));
-        }
-        else {
-            return response(["Message" => "you are not logIn"]);
-        }
+       if(DB::table('users')->where(['email' => $req->email])->exists())
+       {
+         return response(["message","This email is not available"]);
+       }
+       else{
+        return $next($req);
+       }
     }
 }
